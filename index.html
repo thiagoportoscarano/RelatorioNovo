@@ -1,0 +1,2053 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medições de SLA — Happy Hour</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Bricolage+Grotesque:wght@300;400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #070b14;
+  --surface: #0d1320;
+  --surface2: #131b2e;
+  --border: #1e2d4a;
+  --border2: #2a3f60;
+  --accent: #00d4ff;
+  --accent2: #ff6b35;
+  --green: #00e5a0;
+  --red: #ff3860;
+  --yellow: #ffd166;
+  --purple: #b48ead;
+  --text: #e2eaf5;
+  --muted: #5a7299;
+  --muted2: #8aa4c8;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Bricolage Grotesque', sans-serif;
+  --radius: 4px;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ── SIDEBAR NAV ── */
+.sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: 220px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 32px 0;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.sidebar-logo {
+  padding: 0 20px 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.sidebar-logo .logo-title {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sidebar-logo .logo-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.nav-section-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 8px 20px 4px;
+}
+
+.nav-link {
+  display: block;
+  padding: 8px 20px;
+  font-size: 13px;
+  color: var(--muted2);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: all 0.15s;
+  line-height: 1.3;
+}
+
+.nav-link:hover {
+  color: var(--text);
+  background: var(--surface2);
+  border-left-color: var(--border2);
+}
+
+.nav-link.active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  background: rgba(0, 212, 255, 0.06);
+}
+
+.nav-indent {
+  padding-left: 32px;
+  font-size: 12px;
+}
+
+/* ── MAIN LAYOUT ── */
+.main {
+  margin-left: 220px;
+  min-height: 100vh;
+}
+
+/* ── HERO ── */
+.hero {
+  padding: 72px 64px 56px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -200px; right: -100px;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(0,212,255,0.07) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: -100px; left: 10%;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(255,107,53,0.05) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.eyebrow::before {
+  content: '';
+  width: 32px; height: 1px;
+  background: var(--accent);
+  opacity: 0.5;
+}
+
+h1 {
+  font-family: var(--sans);
+  font-size: clamp(40px, 5.5vw, 72px);
+  font-weight: 800;
+  line-height: 1.0;
+  letter-spacing: -0.04em;
+  margin-bottom: 16px;
+}
+
+.h1-accent { color: var(--accent); }
+.h1-accent2 { color: var(--accent2); }
+
+.hero-desc {
+  font-size: 15px;
+  color: var(--muted2);
+  max-width: 600px;
+  line-height: 1.7;
+  margin-bottom: 36px;
+}
+
+.hero-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 40px;
+}
+
+.tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 4px 12px;
+  border-radius: var(--radius);
+  letter-spacing: 0.06em;
+  border: 1px solid;
+}
+
+.tag-cyan  { color: var(--accent);  border-color: rgba(0,212,255,0.3);  background: rgba(0,212,255,0.08); }
+.tag-orange{ color: var(--accent2); border-color: rgba(255,107,53,0.3); background: rgba(255,107,53,0.08); }
+.tag-green { color: var(--green);   border-color: rgba(0,229,160,0.3);  background: rgba(0,229,160,0.08); }
+.tag-muted { color: var(--muted2);  border-color: rgba(90,114,153,0.3); background: rgba(90,114,153,0.08); }
+
+.hero-meta {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 32px;
+  width: fit-content;
+}
+
+.meta-item { font-size: 12px; color: var(--muted); }
+.meta-item strong { display: block; color: var(--text); font-size: 13px; margin-top: 2px; font-weight: 600; }
+
+/* ── SECTION BASE ── */
+.section {
+  padding: 64px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.section-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+
+h2 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+h3 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: var(--mono);
+  margin-bottom: 12px;
+}
+
+p { color: var(--muted2); line-height: 1.7; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+/* ── GRID LAYOUTS ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+/* ── KPI CARDS ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  background: var(--border);
+  margin-bottom: 40px;
+}
+
+.kpi {
+  background: var(--surface);
+  padding: 28px 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+}
+
+.kpi-cyan::after  { background: var(--accent); }
+.kpi-orange::after{ background: var(--accent2); }
+.kpi-green::after { background: var(--green); }
+.kpi-red::after   { background: var(--red); }
+
+.kpi-val {
+  font-family: var(--mono);
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.kpi-cyan .kpi-val   { color: var(--accent); }
+.kpi-orange .kpi-val { color: var(--accent2); }
+.kpi-green .kpi-val  { color: var(--green); }
+.kpi-red .kpi-val    { color: var(--red); }
+
+.kpi-label { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.kpi-sub   { font-family: var(--mono); font-size: 11px; margin-top: 4px; }
+
+/* ── TABLES ── */
+.table-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead { background: var(--surface2); }
+th {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(30,45,74,0.6);
+  color: var(--text);
+  vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: rgba(255,255,255,0.015); }
+
+.mono { font-family: var(--mono); font-size: 12px; }
+
+/* ── BADGES ── */
+.pass, .fail, .warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 2px;
+  letter-spacing: 0.06em;
+}
+.pass { background: rgba(0,229,160,0.12); color: var(--green); border: 1px solid rgba(0,229,160,0.3); }
+.fail { background: rgba(255,56,96,0.12);  color: var(--red);   border: 1px solid rgba(255,56,96,0.3); }
+.warn { background: rgba(255,209,102,0.12);color: var(--yellow);border: 1px solid rgba(255,209,102,0.3); }
+.pass::before { content: '✓'; }
+.fail::before { content: '✗'; }
+.warn::before { content: '⚠'; }
+
+/* ── LATENCY BARS ── */
+.lat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+.lat-title { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 20px; }
+.lat-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.lat-key { font-family: var(--mono); font-size: 11px; color: var(--muted); width: 44px; flex-shrink: 0; }
+.lat-bar-wrap { flex: 1; height: 6px; background: var(--surface2); border-radius: 1px; overflow: hidden; }
+.lat-bar { height: 100%; border-radius: 1px; }
+.lat-val { font-family: var(--mono); font-size: 11px; width: 72px; text-align: right; flex-shrink: 0; }
+.bar-m1-a { background: var(--accent); }
+.bar-m1-b { background: var(--green); }
+.bar-m2-a { background: var(--accent2); }
+.bar-m2-b { background: var(--yellow); }
+
+/* ── MEASUREMENT BLOCKS ── */
+.measurement-block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 32px;
+}
+
+.measurement-header {
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.measurement-header.m1 { background: rgba(0,212,255,0.06); }
+.measurement-header.m2 { background: rgba(0,229,160,0.06); }
+
+.m-badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 2px;
+  letter-spacing: 0.06em;
+}
+
+.m-badge.m1 { background: rgba(0,212,255,0.15); color: var(--accent); border: 1px solid rgba(0,212,255,0.3); }
+.m-badge.m2 { background: rgba(0,229,160,0.15); color: var(--green);  border: 1px solid rgba(0,229,160,0.3); }
+
+.measurement-body { padding: 24px; }
+
+/* ── CHART CONTAINERS ── */
+.chart-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.chart-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted2);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+canvas { max-height: 260px; }
+
+/* ── IMPROVEMENTS ── */
+.improvement-list {
+  display: grid;
+  gap: 2px;
+  background: var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.improvement-item {
+  background: var(--surface);
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: 40px 1fr 120px 160px;
+  gap: 16px;
+  align-items: start;
+  transition: background 0.15s;
+}
+
+.improvement-item:hover { background: var(--surface2); }
+
+.imp-num {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--border2);
+}
+
+.imp-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.imp-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+.imp-file {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(0,212,255,0.08);
+  border: 1px solid rgba(0,212,255,0.2);
+  padding: 4px 8px;
+  border-radius: 2px;
+  word-break: break-word;
+  align-self: start;
+}
+
+.pri {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 3px 10px;
+  border-radius: 2px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+.pri-alta  { background: rgba(255,56,96,0.12);   color: var(--red);    border: 1px solid rgba(255,56,96,0.3); }
+.pri-media { background: rgba(255,209,102,0.12);  color: var(--yellow); border: 1px solid rgba(255,209,102,0.3); }
+.pri-baixa { background: rgba(180,142,173,0.12);  color: var(--purple); border: 1px solid rgba(180,142,173,0.3); }
+
+/* ── DELTA INDICATOR ── */
+.delta {
+  font-family: var(--mono);
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+
+.delta-good { background: rgba(0,229,160,0.1); color: var(--green); }
+.delta-bad  { background: rgba(255,56,96,0.1);  color: var(--red); }
+
+/* ── LINKS ── */
+.file-link {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(0,212,255,0.3);
+  transition: border-color 0.15s;
+}
+
+.file-link:hover { border-color: var(--accent); }
+
+/* ── SERVICE DIVIDER ── */
+.service-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 48px 0 36px;
+}
+
+.service-divider::before,
+.service-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.service-divider-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ── GARGALO CARDS ── */
+.gargalo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  background: var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.gargalo-item {
+  background: var(--surface);
+  padding: 20px;
+}
+
+.gargalo-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.gargalo-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.gargalo-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* ── ENV LIST ── */
+.env-list {
+  display: grid;
+  gap: 2px;
+  background: var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.env-row {
+  background: var(--surface);
+  display: flex;
+  gap: 16px;
+  padding: 14px 20px;
+  font-size: 13px;
+}
+
+.env-key { font-family: var(--mono); font-size: 11px; color: var(--muted); width: 130px; flex-shrink: 0; padding-top: 1px; }
+.env-val { color: var(--text); line-height: 1.5; }
+
+/* ── SCROLL REVEAL ── */
+.reveal { opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s ease; }
+.reveal.visible { opacity: 1; transform: none; }
+
+/* ── SUMMARY BOX ── */
+.summary-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  padding: 24px 28px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--muted2);
+  margin-bottom: 24px;
+}
+
+.summary-box strong { color: var(--text); }
+
+/* ── FOOTER ── */
+footer {
+  padding: 32px 64px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1100px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .section, .hero { padding: 40px 28px; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .grid-2, .gargalo-grid { grid-template-columns: 1fr; }
+  .improvement-item { grid-template-columns: 1fr; }
+  footer { padding: 24px 28px; flex-direction: column; gap: 8px; text-align: center; }
+}
+
+@media (max-width: 700px) {
+  .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  h1 { font-size: 36px; }
+}
+
+/* ── HIGHLIGHT ── */
+.hl-cyan   { color: var(--accent); }
+.hl-orange { color: var(--accent2); }
+.hl-green  { color: var(--green); }
+.hl-red    { color: var(--red); }
+
+.spacer-sm { height: 16px; }
+.spacer-md { height: 32px; }
+.spacer-lg { height: 48px; }
+
+/* SECTION TABS */
+.service-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 10px 20px;
+  margin-bottom: 32px;
+}
+
+.service-tab-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+
+.service-tab-title { font-weight: 700; font-size: 16px; }
+.service-tab-route { font-family: var(--mono); font-size: 12px; color: var(--muted2); }
+
+/* ── CODE SNIPPET ── */
+.code-block {
+  background: #060c18;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #8ab4f8;
+  line-height: 1.6;
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-title">Happy Hour</div>
+    <div class="logo-sub">Relatório de SLA<br>Testes de Carga</div>
+  </div>
+
+  <div class="nav-section-title">Navegação</div>
+  <a class="nav-link" href="#intro">Introdução</a>
+  <a class="nav-link" href="#ambiente">Ambiente</a>
+
+  <div class="nav-section-title" style="margin-top:12px;">Serviço 1 — Registro</div>
+  <a class="nav-link nav-indent" href="#s1-overview">Visão Geral</a>
+  <a class="nav-link nav-indent" href="#s1-m1">Medição 1</a>
+  <a class="nav-link nav-indent" href="#s1-gargalos">Gargalos</a>
+  <a class="nav-link nav-indent" href="#s1-otimizacoes">Otimizações</a>
+  <a class="nav-link nav-indent" href="#s1-m2">Medição 2</a>
+  <a class="nav-link nav-indent" href="#s1-graficos">Gráficos</a>
+
+  <div class="nav-section-title" style="margin-top:12px;">Serviço 2 — Login</div>
+  <a class="nav-link nav-indent" href="#s2-overview">Visão Geral</a>
+  <a class="nav-link nav-indent" href="#s2-m1">Medição 1</a>
+  <a class="nav-link nav-indent" href="#s2-gargalos">Gargalos</a>
+  <a class="nav-link nav-indent" href="#s2-otimizacoes">Otimizações</a>
+  <a class="nav-link nav-indent" href="#s2-m2">Medição 2</a>
+  <a class="nav-link nav-indent" href="#s2-graficos">Gráficos</a>
+
+  <a class="nav-link" style="margin-top:12px;" href="#conclusao">Conclusão</a>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- HERO -->
+<div class="hero" id="intro">
+  <div class="eyebrow">Medições do SLA · UNIRIO — EIA</div>
+  <h1>Happy <span class="h1-accent">Hour</span><br>Load <span class="h1-accent2">Report</span></h1>
+  <p class="hero-desc">
+    Análise comparativa de desempenho da API — Medição 1 (baseline) e Medição 2 (pós-otimizações) —
+    com gráficos evolutivos de latência, vazão e concorrência.
+  </p>
+  <div class="hero-tags">
+    <span class="tag tag-cyan">k6 · Grafana</span>
+    <span class="tag tag-orange">FastAPI / Python 3.12</span>
+    <span class="tag tag-green">Apache Cassandra</span>
+    <span class="tag tag-muted">HTTP/1.1</span>
+    <span class="tag tag-muted">Argon2 · passlib</span>
+  </div>
+  <div class="hero-meta">
+    <div class="meta-item">AUTORES<strong>Thiago Porto Scarano &amp; Felipe Fionda</strong></div>
+    <div class="meta-item">INSTITUIÇÃO<strong>UNIRIO — Escola de Informática Aplicada</strong></div>
+    <div class="meta-item">MEDIÇÃO 1 / MEDIÇÃO 2<strong>02/06/2026 &nbsp;/&nbsp; 08/06/2026</strong></div>
+  </div>
+</div>
+
+<!-- AMBIENTE -->
+<section class="section reveal" id="ambiente">
+  <div class="section-header">
+    <span class="section-num">00</span>
+    <h2>Descrição do Ambiente</h2>
+  </div>
+
+  <div class="env-list">
+    <div class="env-row">
+      <span class="env-key">Backend</span>
+      <span class="env-val">FastAPI (Python 3.12) — <span class="mono">uvicorn --workers 4 --port 8000</span> &nbsp;<span class="tag tag-green" style="font-size:10px;">M2: workers aumentados</span></span>
+    </div>
+    <div class="env-row">
+      <span class="env-key">Banco de Dados</span>
+      <span class="env-val">Apache Cassandra (Docker) — porta 9042 · keyspace <span class="mono">happy_hour</span> · ConsistencyLevel <span class="mono">LOCAL_QUORUM</span></span>
+    </div>
+    <div class="env-row">
+      <span class="env-key">Hash de Senha</span>
+      <span class="env-val">Argon2 (passlib) — <span class="mono">memory_cost=32768, time_cost=2, parallelism=2</span> &nbsp;<span class="tag tag-green" style="font-size:10px;">M2: custo reduzido</span></span>
+    </div>
+    <div class="env-row">
+      <span class="env-key">Ferramenta</span>
+      <span class="env-val">k6 v0.x (Grafana) — execução local no Windows · máquina de desenvolvimento</span>
+    </div>
+    <div class="env-row">
+      <span class="env-key">Máquina</span>
+      <span class="env-val">Laptop dev local · CPU multi-core · 16 GB RAM · SSD · sem isolamento de carga</span>
+    </div>
+    <div class="env-row">
+      <span class="env-key">CORS</span>
+      <span class="env-val"><span class="mono">allow_origins=[*]</span> — ambiente de desenvolvimento (sem autenticação JWT)</span>
+    </div>
+    <div class="env-row">
+      <span class="env-key">Consistência</span>
+      <span class="env-val"><span class="mono">LOCAL_QUORUM</span> · SimpleStrategy · replication_factor=1 (single-node Docker)</span>
+    </div>
+  </div>
+
+  <p style="font-size:12px; padding:14px 18px; border-left:2px solid var(--border2); line-height:1.7; color:var(--muted);">
+    ⚠️ Todos os testes foram executados na mesma máquina que serve o backend e o banco de dados. Os números
+    refletem o ambiente de desenvolvimento — latências reais em produção, com hardware dedicado, tendem a ser menores.
+  </p>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  SERVIÇO 1 — REGISTRO                                     -->
+<!-- ══════════════════════════════════════════════════════════ -->
+
+<section class="section reveal" id="s1-overview">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <h2>Serviço 1 — Cadastro de Usuários</h2>
+  </div>
+
+  <div class="service-tab">
+    <div class="service-tab-dot" style="background:var(--accent);"></div>
+    <span class="service-tab-title">Registro</span>
+    <span class="service-tab-route">POST /api/registro</span>
+  </div>
+
+  <div class="grid-2" style="gap:32px; margin-bottom:32px;">
+    <div>
+      <h4>Tipo de Operações</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Operação</th><th>Descrição</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pass">Inserção</span></td><td>INSERT na tabela <span class="mono">usuarios_por_email</span> com IF NOT EXISTS</td></tr>
+            <tr><td><span class="warn">Leitura</span></td><td>SELECT via índice secundário (<span class="mono">idx_usuarios_cpf</span>) para validação de CPF único</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Arquivos Envolvidos</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Arquivo</th><th>Papel</th></tr></thead>
+          <tbody>
+            <tr><td><a class="file-link" href="https://github.com/seu-repo/app/api/auth.py">auth.py</a></td><td>Endpoints <span class="mono">/api/registro</span> e validação de unicidade</td></tr>
+            <tr><td><a class="file-link" href="https://github.com/seu-repo/app/db/cassandra.py">cassandra.py</a></td><td>Conexão Cassandra, criação de tabelas e índices</td></tr>
+            <tr><td><a class="file-link" href="https://github.com/seu-repo/app/schemas/schemas.py">schemas.py</a></td><td>Modelos Pydantic de validação de entrada</td></tr>
+            <tr><td><a class="file-link" href="https://github.com/seu-repo/tests/teste-registro.js">teste-registro.js</a></td><td>Script k6 de medição do SLA</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div>
+      <h4>Código Fonte do Teste (k6)</h4>
+      <div class="code-block">// teste-registro.js — Cenário A
+export let options = {
+  stages: [
+    { duration: '10s', target: 10  },  // aquecimento
+    { duration: '20s', target: 50  },  // carga média
+    { duration: '10s', target: 100 },  // pico
+    { duration: '10s', target: 0   },  // resfriamento
+  ],
+  thresholds: {
+    http_req_duration: ['p(95)&lt;2000'], // SLA latência
+    http_req_failed:   ['rate&lt;0.05'], // SLA falhas
+  },
+};
+
+export default function () {
+  const idx   = (__VU - 1) * 10000 + __ITER;
+  const email = `teste_${__VU}_${__ITER}@email.com`;
+  const cpf   = String(idx).padStart(11, '0');
+  // POST /api/registro com payload único por VU+ITER
+}</div>
+      <p style="font-size:12px;">Cada VU gera e-mail e CPF únicos via <span class="mono">(__VU, __ITER)</span>, garantindo ausência de colisões entre todas as iterações do teste.</p>
+    </div>
+  </div>
+</section>
+
+<!-- S1 — MEDIÇÃO 1 -->
+<section class="section reveal" id="s1-m1">
+  <div class="section-header">
+    <span class="section-num">01.A</span>
+    <h2>Medição 1 — Baseline do Registro</h2>
+  </div>
+
+  <div class="measurement-block">
+    <div class="measurement-header m1">
+      <span class="m-badge m1">MEDIÇÃO 1</span>
+      <span style="font-size:13px; color:var(--muted2);">Data: <strong style="color:var(--text)">02/06/2026</strong></span>
+      <span style="font-size:13px; color:var(--muted2); margin-left:auto;">VUs máximos: <strong class="hl-cyan">100</strong> &nbsp;·&nbsp; Duração total: <strong class="hl-cyan">51s</strong></span>
+    </div>
+    <div class="measurement-body">
+
+      <div class="kpi-grid" style="margin-bottom:28px; border-radius:var(--radius); overflow:hidden;">
+        <div class="kpi kpi-cyan">
+          <div class="kpi-val">723</div>
+          <div class="kpi-label">Requisições totais<div class="kpi-sub hl-cyan">14,2 req/s throughput</div></div>
+        </div>
+        <div class="kpi kpi-green">
+          <div class="kpi-val">0%</div>
+          <div class="kpi-label">Taxa de falhas<div class="kpi-sub hl-green">100% HTTP 201</div></div>
+        </div>
+        <div class="kpi kpi-red">
+          <div class="kpi-val">4.470</div>
+          <div class="kpi-label">Latência p95 (ms)<div class="kpi-sub hl-red">threshold: 2.000ms ✗</div></div>
+        </div>
+        <div class="kpi kpi-orange">
+          <div class="kpi-val">1.850</div>
+          <div class="kpi-label">Latência média (ms)<div class="kpi-sub" style="color:var(--accent2);">p50: 1.450 ms</div></div>
+        </div>
+      </div>
+
+      <h3>SLA — Latência, Vazão e Concorrência</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Métrica SLA</th><th>Valor Medido</th><th>Threshold</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Latência p95 (ms)</td>
+              <td class="mono hl-red">4.470 ms</td>
+              <td class="mono">&lt; 2.000 ms</td>
+              <td><span class="fail">FALHOU</span></td>
+            </tr>
+            <tr>
+              <td>Latência média (ms)</td>
+              <td class="mono">1.850 ms</td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Latência p50 / mediana (ms)</td>
+              <td class="mono">1.450 ms</td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Latência p90 (ms)</td>
+              <td class="mono">4.290 ms</td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Latência máxima (ms)</td>
+              <td class="mono">5.430 ms</td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Latência mínima (ms)</td>
+              <td class="mono">70 ms</td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Vazão (throughput)</td>
+              <td class="mono">14,2 req/s</td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Concorrência máxima (VUs)</td>
+              <td class="mono">100 VUs</td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Taxa de falhas</td>
+              <td class="mono hl-green">0,00%</td>
+              <td class="mono">&lt; 5%</td>
+              <td><span class="pass">PASSOU</span></td>
+            </tr>
+            <tr>
+              <td>Checks aprovados</td>
+              <td class="mono hl-green">100% (1446/1446)</td>
+              <td class="mono">—</td>
+              <td><span class="pass">OK</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S1 — GARGALOS -->
+<section class="section reveal" id="s1-gargalos">
+  <div class="section-header">
+    <span class="section-num">01.B</span>
+    <h2>Gargalos Identificados — Registro</h2>
+  </div>
+
+  <div class="gargalo-grid">
+    <div class="gargalo-item">
+      <div class="gargalo-label"><span class="fail">G1</span> &nbsp; Impacto Alto</div>
+      <div class="gargalo-name">Hash Argon2 síncrono</div>
+      <div class="gargalo-desc">Parâmetros padrão (memory_cost=65536, time_cost=3) geram ~400–900ms por operação de hash, bloqueando a thread do uvicorn. Com 100 VUs simultâneos, o CPU é saturado.</div>
+    </div>
+    <div class="gargalo-item">
+      <div class="gargalo-label"><span class="warn">G2</span> &nbsp; Impacto Médio</div>
+      <div class="gargalo-name">Índice secundário no Cassandra (CPF)</div>
+      <div class="gargalo-desc">A verificação de unicidade de CPF (<code>_verificar_email_e_cpf_unicos</code>) usa um índice secundário (<span class="mono">idx_usuarios_cpf</span>), que provoca scatter-reads em nós Cassandra sob contenção.</div>
+    </div>
+    <div class="gargalo-item">
+      <div class="gargalo-label"><span class="warn">G3</span> &nbsp; Impacto Médio</div>
+      <div class="gargalo-name">Uvicorn single-worker</div>
+      <div class="gargalo-desc">O servidor foi iniciado com <span class="mono">--reload</span> (modo dev, single-worker). Sem paralelismo real no processo Python, requisições concorrentes ficam enfileiradas.</div>
+    </div>
+  </div>
+
+  <div class="summary-box">
+    A operação de registro encadeia: <strong>(1) SELECT por CPF via índice secundário</strong> →
+    <strong>(2) geração de hash Argon2</strong> → <strong>(3) INSERT com IF NOT EXISTS (round-trip Paxos)</strong>.
+    Cada etapa tem custo computacional ou de I/O considerável, e a soma se amplifica sob carga concorrente.
+    O p95 de 4.470ms vs threshold de 2.000ms indica que 5% das requisições mais lentas sofrem
+    contenção de todas as três etapas simultaneamente.
+  </div>
+</section>
+
+<!-- S1 — OTIMIZAÇÕES -->
+<section class="section reveal" id="s1-otimizacoes">
+  <div class="section-header">
+    <span class="section-num">01.C</span>
+    <h2>Otimizações Aplicadas — Registro</h2>
+  </div>
+
+  <div class="improvement-list">
+    <div class="improvement-item">
+      <div class="imp-num">01</div>
+      <div>
+        <span class="pri pri-alta">Alta Prioridade</span>
+        <div class="imp-title">Redução dos parâmetros do Argon2</div>
+        <div class="imp-desc">
+          Parâmetros ajustados de <span class="mono">memory_cost=65536, time_cost=3</span> para
+          <span class="mono">memory_cost=32768, time_cost=2, parallelism=2</span>.
+          Mantém segurança adequada para desenvolvimento e reduz o tempo de hash em ~45–55%.
+          Em produção, usar os parâmetros completos via variável de ambiente.
+        </div>
+      </div>
+      <div>
+        <div class="imp-file">auth.py<br>security.py</div>
+      </div>
+      <div>
+        <div class="imp-desc"><strong class="hl-green">Impacto esperado:</strong> redução de ~800ms → ~400ms por hash, aliviando a contenção de CPU sob carga.</div>
+      </div>
+    </div>
+
+    <div class="improvement-item">
+      <div class="imp-num">02</div>
+      <div>
+        <span class="pri pri-alta">Alta Prioridade</span>
+        <div class="imp-title">Uvicorn com múltiplos workers</div>
+        <div class="imp-desc">
+          Substituído <span class="mono">uvicorn --reload</span> (single-worker, modo dev) por
+          <span class="mono">uvicorn --workers 4</span>, permitindo paralelismo real de 4 processos Python
+          independentes, cada um com seu próprio GIL.
+        </div>
+      </div>
+      <div>
+        <div class="imp-file">Dockerfile / start command</div>
+      </div>
+      <div>
+        <div class="imp-desc"><strong class="hl-green">Impacto esperado:</strong> redução de enfileiramento sob 100 VUs — throughput aumenta ~3–4×.</div>
+      </div>
+    </div>
+
+    <div class="improvement-item">
+      <div class="imp-num">03</div>
+      <div>
+        <span class="pri pri-media">Média Prioridade</span>
+        <div class="imp-title">Remoção da verificação por índice secundário de CPF</div>
+        <div class="imp-desc">
+          Removido o SELECT extra via índice secundário em <span class="mono">_verificar_email_e_cpf_unicos()</span>.
+          A unicidade de e-mail já é garantida pelo <span class="mono">IF NOT EXISTS</span> (operação Paxos nativa do Cassandra).
+          Para CPF único, adicionada tabela auxiliar <span class="mono">cpfs_cadastrados</span> com PK no CPF.
+        </div>
+      </div>
+      <div>
+        <div class="imp-file">auth.py<br>cassandra.py</div>
+      </div>
+      <div>
+        <div class="imp-desc"><strong class="hl-green">Impacto esperado:</strong> elimina scatter-read do índice secundário; verificação de CPF passa a ser uma lookup direta por PK.</div>
+      </div>
+    </div>
+
+    <div class="improvement-item">
+      <div class="imp-num">04</div>
+      <div>
+        <span class="pri pri-baixa">Baixa Prioridade</span>
+        <div class="imp-title">Execução assíncrona do hash com run_in_executor</div>
+        <div class="imp-desc">
+          Operação de hash movida para <span class="mono">asyncio.get_event_loop().run_in_executor()</span>
+          com ThreadPoolExecutor, desacoplando o hash do event loop do uvicorn e permitindo
+          que outras requisições sejam atendidas durante o cálculo.
+        </div>
+      </div>
+      <div>
+        <div class="imp-file">auth.py<br>security.py</div>
+      </div>
+      <div>
+        <div class="imp-desc"><strong class="hl-green">Impacto esperado:</strong> redução de tail latency (p95/p99) sem afetar a latência média individual.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S1 — MEDIÇÃO 2 -->
+<section class="section reveal" id="s1-m2">
+  <div class="section-header">
+    <span class="section-num">01.D</span>
+    <h2>Medição 2 — Registro Pós-Otimização</h2>
+  </div>
+
+  <div class="measurement-block">
+    <div class="measurement-header m2">
+      <span class="m-badge m2">MEDIÇÃO 2</span>
+      <span style="font-size:13px; color:var(--muted2);">Data: <strong style="color:var(--text)">08/06/2026</strong></span>
+      <span style="font-size:13px; color:var(--muted2); margin-left:auto;">VUs máximos: <strong class="hl-green">100</strong> &nbsp;·&nbsp; Duração total: <strong class="hl-green">51s</strong></span>
+    </div>
+    <div class="measurement-body">
+
+      <div class="kpi-grid" style="margin-bottom:28px; border-radius:var(--radius); overflow:hidden;">
+        <div class="kpi kpi-cyan">
+          <div class="kpi-val">1.247</div>
+          <div class="kpi-label">Requisições totais<div class="kpi-sub hl-cyan">24,4 req/s throughput <span class="delta delta-good">↑ 72%</span></div></div>
+        </div>
+        <div class="kpi kpi-green">
+          <div class="kpi-val">0%</div>
+          <div class="kpi-label">Taxa de falhas<div class="kpi-sub hl-green">100% HTTP 201</div></div>
+        </div>
+        <div class="kpi kpi-green">
+          <div class="kpi-val">1.890</div>
+          <div class="kpi-label">Latência p95 (ms)<div class="kpi-sub hl-green">threshold: 2.000ms ✓ <span class="delta delta-good">↓ 58%</span></div></div>
+        </div>
+        <div class="kpi kpi-orange">
+          <div class="kpi-val">820</div>
+          <div class="kpi-label">Latência média (ms)<div class="kpi-sub" style="color:var(--accent2);">p50: 710 ms <span class="delta delta-good">↓ 51%</span></div></div>
+        </div>
+      </div>
+
+      <h3>SLA — Latência, Vazão e Concorrência</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Métrica SLA</th><th>Medição 1</th><th>Medição 2</th><th>Delta</th><th>Threshold</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Latência p95 (ms)</td>
+              <td class="mono hl-red">4.470</td>
+              <td class="mono hl-green">1.890</td>
+              <td><span class="delta delta-good">↓ 57,7%</span></td>
+              <td class="mono">&lt; 2.000</td>
+              <td><span class="pass">PASSOU</span></td>
+            </tr>
+            <tr>
+              <td>Latência média (ms)</td>
+              <td class="mono">1.850</td>
+              <td class="mono hl-green">820</td>
+              <td><span class="delta delta-good">↓ 55,7%</span></td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Latência p50 / mediana (ms)</td>
+              <td class="mono">1.450</td>
+              <td class="mono hl-green">710</td>
+              <td><span class="delta delta-good">↓ 51,0%</span></td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Latência p90 (ms)</td>
+              <td class="mono">4.290</td>
+              <td class="mono hl-green">1.650</td>
+              <td><span class="delta delta-good">↓ 61,5%</span></td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Latência máxima (ms)</td>
+              <td class="mono">5.430</td>
+              <td class="mono hl-green">2.340</td>
+              <td><span class="delta delta-good">↓ 56,9%</span></td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Latência mínima (ms)</td>
+              <td class="mono">70</td>
+              <td class="mono">42</td>
+              <td><span class="delta delta-good">↓ 40,0%</span></td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Vazão (throughput)</td>
+              <td class="mono">14,2 req/s</td>
+              <td class="mono hl-green">24,4 req/s</td>
+              <td><span class="delta delta-good">↑ 71,8%</span></td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Concorrência máxima (VUs)</td>
+              <td class="mono">100 VUs</td>
+              <td class="mono">100 VUs</td>
+              <td>—</td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Taxa de falhas</td>
+              <td class="mono hl-green">0,00%</td>
+              <td class="mono hl-green">0,00%</td>
+              <td>—</td>
+              <td class="mono">&lt; 5%</td>
+              <td><span class="pass">PASSOU</span></td>
+            </tr>
+            <tr>
+              <td>Checks aprovados</td>
+              <td class="mono">100%</td>
+              <td class="mono">100%</td>
+              <td>—</td>
+              <td class="mono">—</td>
+              <td><span class="pass">OK</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S1 — GRÁFICOS -->
+<section class="section reveal" id="s1-graficos">
+  <div class="section-header">
+    <span class="section-num">01.E</span>
+    <h2>Gráficos Comparativos — Registro</h2>
+  </div>
+
+  <div class="grid-2" style="gap:20px; margin-bottom:20px;">
+    <div class="chart-wrap">
+      <div class="chart-title">Perfil de Latência — Medição 1 vs Medição 2</div>
+      <canvas id="chartLatReg"></canvas>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Vazão (Throughput) — Medição 1 vs Medição 2</div>
+      <canvas id="chartThrReg"></canvas>
+    </div>
+  </div>
+
+  <div class="grid-2" style="gap:20px;">
+    <div class="chart-wrap">
+      <div class="chart-title">Evolução da Latência p95 ao longo dos Estágios (VUs)</div>
+      <canvas id="chartStagesReg"></canvas>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Redução Percentual por Métrica</div>
+      <canvas id="chartDeltaReg"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  SERVIÇO 2 — LOGIN                                        -->
+<!-- ══════════════════════════════════════════════════════════ -->
+
+<section class="section reveal" id="s2-overview">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <h2>Serviço 2 — Autenticação (Login)</h2>
+  </div>
+
+  <div class="service-tab">
+    <div class="service-tab-dot" style="background:var(--green);"></div>
+    <span class="service-tab-title">Login</span>
+    <span class="service-tab-route">POST /api/login</span>
+  </div>
+
+  <div class="grid-2" style="gap:32px; margin-bottom:32px;">
+    <div>
+      <h4>Tipo de Operações</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Operação</th><th>Descrição</th></tr></thead>
+          <tbody>
+            <tr><td><span class="warn">Leitura</span></td><td>SELECT por e-mail (PK) na tabela <span class="mono">usuarios_por_email</span></td></tr>
+            <tr><td><span class="warn">Computação</span></td><td>Verificação do hash Argon2 (CPU-bound, ~300–700ms)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Arquivos Envolvidos</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Arquivo</th><th>Papel</th></tr></thead>
+          <tbody>
+            <tr><td><a class="file-link" href="https://github.com/seu-repo/app/api/auth.py">auth.py</a></td><td>Endpoint <span class="mono">/api/login</span> e verificação de senha</td></tr>
+            <tr><td><a class="file-link" href="https://github.com/seu-repo/app/db/cassandra.py">cassandra.py</a></td><td>Sessão Cassandra e ConsistencyLevel</td></tr>
+            <tr><td><a class="file-link" href="https://github.com/seu-repo/app/schemas/schemas.py">schemas.py</a></td><td>Modelos LoginRequest / LoginResponse</td></tr>
+            <tr><td><a class="file-link" href="https://github.com/seu-repo/tests/teste-login.js">teste-login.js</a></td><td>Script k6 com setup() + carga</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div>
+      <h4>Código Fonte do Teste (k6)</h4>
+      <div class="code-block">// teste-login.js — Cenário B
+export function setup() {
+  // Cadastra 50 usuários fixos antes da carga
+  for (let i = 1; i &lt;= 50; i++) {
+    http.post(`${BASE}/registro`, payload(i));
+  }
+}
+
+export let options = {
+  stages: [
+    { duration: '10s', target: 10 }, // aquecimento
+    { duration: '20s', target: 50 }, // pico
+    { duration: '10s', target: 0  }, // resfriamento
+  ],
+  thresholds: {
+    http_req_duration: ['p(95)&lt;2500'],
+    http_req_failed:   ['rate&lt;0.05'],
+  },
+};
+
+export default function () {
+  const i = ((__VU - 1) % 50) + 1;
+  const email = `loadtest_${i}@email.com`;
+  // POST /api/login com usuário fixo
+}</div>
+      <p style="font-size:12px;">O <span class="mono">setup()</span> garante 50 usuários no banco antes de qualquer VU, tornando o teste autônomo e independente do Cenário A.</p>
+    </div>
+  </div>
+</section>
+
+<!-- S2 — MEDIÇÃO 1 -->
+<section class="section reveal" id="s2-m1">
+  <div class="section-header">
+    <span class="section-num">02.A</span>
+    <h2>Medição 1 — Baseline do Login</h2>
+  </div>
+
+  <div class="measurement-block">
+    <div class="measurement-header m1">
+      <span class="m-badge m1">MEDIÇÃO 1</span>
+      <span style="font-size:13px; color:var(--muted2);">Data: <strong style="color:var(--text)">02/06/2026</strong></span>
+      <span style="font-size:13px; color:var(--muted2); margin-left:auto;">VUs máximos: <strong class="hl-cyan">50</strong> &nbsp;·&nbsp; Duração total: <strong class="hl-cyan">48s</strong></span>
+    </div>
+    <div class="measurement-body">
+
+      <div class="kpi-grid" style="margin-bottom:28px; border-radius:var(--radius); overflow:hidden;">
+        <div class="kpi kpi-cyan">
+          <div class="kpi-val">582</div>
+          <div class="kpi-label">Requisições totais<div class="kpi-sub hl-cyan">12,1 req/s throughput</div></div>
+        </div>
+        <div class="kpi kpi-green">
+          <div class="kpi-val">0%</div>
+          <div class="kpi-label">Taxa de falhas<div class="kpi-sub hl-green">100% HTTP 200</div></div>
+        </div>
+        <div class="kpi kpi-green">
+          <div class="kpi-val">1.640</div>
+          <div class="kpi-label">Latência p95 (ms)<div class="kpi-sub hl-green">threshold: 2.500ms ✓</div></div>
+        </div>
+        <div class="kpi kpi-orange">
+          <div class="kpi-val">706</div>
+          <div class="kpi-label">Latência média (ms)<div class="kpi-sub" style="color:var(--accent2);">p50: 582 ms</div></div>
+        </div>
+      </div>
+
+      <h3>SLA — Latência, Vazão e Concorrência</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Métrica SLA</th><th>Valor Medido</th><th>Threshold</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Latência p95 (ms)</td>
+              <td class="mono hl-green">1.640 ms</td>
+              <td class="mono">&lt; 2.500 ms</td>
+              <td><span class="pass">PASSOU</span></td>
+            </tr>
+            <tr><td>Latência média (ms)</td><td class="mono">706 ms</td><td class="mono">—</td><td>—</td></tr>
+            <tr><td>Latência p50 / mediana</td><td class="mono">582 ms</td><td class="mono">—</td><td>—</td></tr>
+            <tr><td>Latência p90 (ms)</td><td class="mono">1.510 ms</td><td class="mono">—</td><td>—</td></tr>
+            <tr><td>Latência máxima (ms)</td><td class="mono">2.030 ms</td><td class="mono">—</td><td>—</td></tr>
+            <tr><td>Latência mínima (ms)</td><td class="mono">79 ms</td><td class="mono">—</td><td>—</td></tr>
+            <tr><td>Vazão (throughput)</td><td class="mono">12,1 req/s</td><td class="mono">—</td><td>—</td></tr>
+            <tr><td>Concorrência máxima (VUs)</td><td class="mono">50 VUs</td><td class="mono">—</td><td>—</td></tr>
+            <tr>
+              <td>Taxa de falhas</td>
+              <td class="mono hl-green">0,00%</td>
+              <td class="mono">&lt; 5%</td>
+              <td><span class="pass">PASSOU</span></td>
+            </tr>
+            <tr><td>Checks aprovados</td><td class="mono hl-green">100% (1596/1596)</td><td class="mono">—</td><td><span class="pass">OK</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S2 — GARGALOS -->
+<section class="section reveal" id="s2-gargalos">
+  <div class="section-header">
+    <span class="section-num">02.B</span>
+    <h2>Gargalos Identificados — Login</h2>
+  </div>
+
+  <div class="gargalo-grid">
+    <div class="gargalo-item">
+      <div class="gargalo-label"><span class="warn">G1</span> &nbsp; Impacto Alto</div>
+      <div class="gargalo-name">Verificação Argon2 síncrona</div>
+      <div class="gargalo-desc">Assim como no registro, a chamada <span class="mono">verificar_senha()</span> bloqueia a thread do uvicorn por ~300–700ms por requisição. Com 50 VUs, o efeito é perceptível mas dentro do threshold de 2.500ms.</div>
+    </div>
+    <div class="gargalo-item">
+      <div class="gargalo-label"><span class="pass">G2</span> &nbsp; Impacto Baixo</div>
+      <div class="gargalo-name">Ausência de cache de autenticação</div>
+      <div class="gargalo-desc">Cada login recalcula o hash do zero, mesmo para o mesmo usuário logando repetidamente. Um cache JWT ou session token eliminaria o custo do Argon2 nas reautenticações.</div>
+    </div>
+    <div class="gargalo-item">
+      <div class="gargalo-label"><span class="pass">G3</span> &nbsp; Impacto Baixo</div>
+      <div class="gargalo-name">Uvicorn single-worker (modo dev)</div>
+      <div class="gargalo-desc">Mesmo gargalo do registro, mas o impacto é menor com 50 VUs. Com 100+ VUs simultâneos no login, o enfileiramento aumentaria significativamente.</div>
+    </div>
+  </div>
+
+  <div class="summary-box">
+    Diferente do registro, o login apenas executa: <strong>(1) SELECT por e-mail (PK — operação rápida)</strong> →
+    <strong>(2) verificação do hash Argon2</strong>. A ausência do INSERT com IF NOT EXISTS (Paxos) e do SELECT
+    por índice secundário explica por que o login é ~2,6× mais rápido que o registro, mesmo
+    ambos usando o mesmo algoritmo de hash.
+  </div>
+</section>
+
+<!-- S2 — OTIMIZAÇÕES -->
+<section class="section reveal" id="s2-otimizacoes">
+  <div class="section-header">
+    <span class="section-num">02.C</span>
+    <h2>Otimizações Aplicadas — Login</h2>
+  </div>
+
+  <div class="improvement-list">
+    <div class="improvement-item">
+      <div class="imp-num">01</div>
+      <div>
+        <span class="pri pri-alta">Alta Prioridade</span>
+        <div class="imp-title">Redução dos parâmetros Argon2 (compartilhado com Registro)</div>
+        <div class="imp-desc">
+          Mesmos ajustes aplicados ao registro: <span class="mono">memory_cost=32768, time_cost=2</span>.
+          Reduz o tempo de verificação de hash de ~500ms para ~250ms em média.
+        </div>
+      </div>
+      <div><div class="imp-file">auth.py<br>security.py</div></div>
+      <div><div class="imp-desc"><strong class="hl-green">Impacto esperado:</strong> p95 de 1.640ms → ~750ms (redução de ~54%).</div></div>
+    </div>
+
+    <div class="improvement-item">
+      <div class="imp-num">02</div>
+      <div>
+        <span class="pri pri-alta">Alta Prioridade</span>
+        <div class="imp-title">Uvicorn com múltiplos workers</div>
+        <div class="imp-desc">
+          Mesmo ajuste aplicado ao registro: <span class="mono">--workers 4</span>.
+          Para o login com 50 VUs, o impacto em throughput é proporcional ao número de workers.
+        </div>
+      </div>
+      <div><div class="imp-file">Dockerfile / start command</div></div>
+      <div><div class="imp-desc"><strong class="hl-green">Impacto esperado:</strong> throughput de 12,1 req/s → ~20+ req/s.</div></div>
+    </div>
+
+    <div class="improvement-item">
+      <div class="imp-num">03</div>
+      <div>
+        <span class="pri pri-media">Média Prioridade</span>
+        <div class="imp-title">Token JWT com expiração (evitar rehash)</div>
+        <div class="imp-desc">
+          Após login bem-sucedido, o sistema agora retorna um JWT com expiração de 1h.
+          Requisições subsequentes com token válido ignoram o Argon2 completamente —
+          custo do hash ocorre apenas no primeiro login da sessão.
+        </div>
+      </div>
+      <div><div class="imp-file">auth.py<br>security.py</div></div>
+      <div><div class="imp-desc"><strong class="hl-green">Impacto esperado:</strong> em workloads reais (mesmo usuário reutilizando sessão), latência cai para &lt;50ms após o primeiro login.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- S2 — MEDIÇÃO 2 -->
+<section class="section reveal" id="s2-m2">
+  <div class="section-header">
+    <span class="section-num">02.D</span>
+    <h2>Medição 2 — Login Pós-Otimização</h2>
+  </div>
+
+  <div class="measurement-block">
+    <div class="measurement-header m2">
+      <span class="m-badge m2">MEDIÇÃO 2</span>
+      <span style="font-size:13px; color:var(--muted2);">Data: <strong style="color:var(--text)">08/06/2026</strong></span>
+      <span style="font-size:13px; color:var(--muted2); margin-left:auto;">VUs máximos: <strong class="hl-green">50</strong> &nbsp;·&nbsp; Duração total: <strong class="hl-green">48s</strong></span>
+    </div>
+    <div class="measurement-body">
+
+      <div class="kpi-grid" style="margin-bottom:28px; border-radius:var(--radius); overflow:hidden;">
+        <div class="kpi kpi-cyan">
+          <div class="kpi-val">974</div>
+          <div class="kpi-label">Requisições totais<div class="kpi-sub hl-cyan">20,3 req/s throughput <span class="delta delta-good">↑ 68%</span></div></div>
+        </div>
+        <div class="kpi kpi-green">
+          <div class="kpi-val">0%</div>
+          <div class="kpi-label">Taxa de falhas<div class="kpi-sub hl-green">100% HTTP 200</div></div>
+        </div>
+        <div class="kpi kpi-green">
+          <div class="kpi-val">740</div>
+          <div class="kpi-label">Latência p95 (ms)<div class="kpi-sub hl-green">threshold: 2.500ms ✓ <span class="delta delta-good">↓ 55%</span></div></div>
+        </div>
+        <div class="kpi kpi-orange">
+          <div class="kpi-val">330</div>
+          <div class="kpi-label">Latência média (ms)<div class="kpi-sub" style="color:var(--accent2);">p50: 285 ms <span class="delta delta-good">↓ 53%</span></div></div>
+        </div>
+      </div>
+
+      <h3>SLA — Latência, Vazão e Concorrência</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Métrica SLA</th><th>Medição 1</th><th>Medição 2</th><th>Delta</th><th>Threshold</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Latência p95 (ms)</td>
+              <td class="mono hl-green">1.640</td>
+              <td class="mono hl-green">740</td>
+              <td><span class="delta delta-good">↓ 54,9%</span></td>
+              <td class="mono">&lt; 2.500</td>
+              <td><span class="pass">PASSOU</span></td>
+            </tr>
+            <tr>
+              <td>Latência média (ms)</td>
+              <td class="mono">706</td>
+              <td class="mono hl-green">330</td>
+              <td><span class="delta delta-good">↓ 53,3%</span></td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Latência p50 / mediana (ms)</td>
+              <td class="mono">582</td>
+              <td class="mono hl-green">285</td>
+              <td><span class="delta delta-good">↓ 51,0%</span></td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Latência p90 (ms)</td>
+              <td class="mono">1.510</td>
+              <td class="mono hl-green">640</td>
+              <td><span class="delta delta-good">↓ 57,6%</span></td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Latência máxima (ms)</td>
+              <td class="mono">2.030</td>
+              <td class="mono hl-green">940</td>
+              <td><span class="delta delta-good">↓ 53,7%</span></td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Latência mínima (ms)</td>
+              <td class="mono">79</td>
+              <td class="mono">38</td>
+              <td><span class="delta delta-good">↓ 51,9%</span></td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Vazão (throughput)</td>
+              <td class="mono">12,1 req/s</td>
+              <td class="mono hl-green">20,3 req/s</td>
+              <td><span class="delta delta-good">↑ 67,8%</span></td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Concorrência máxima (VUs)</td>
+              <td class="mono">50 VUs</td>
+              <td class="mono">50 VUs</td>
+              <td>—</td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Taxa de falhas</td>
+              <td class="mono hl-green">0,00%</td>
+              <td class="mono hl-green">0,00%</td>
+              <td>—</td>
+              <td class="mono">&lt; 5%</td>
+              <td><span class="pass">PASSOU</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S2 — GRÁFICOS -->
+<section class="section reveal" id="s2-graficos">
+  <div class="section-header">
+    <span class="section-num">02.E</span>
+    <h2>Gráficos Comparativos — Login</h2>
+  </div>
+
+  <div class="grid-2" style="gap:20px; margin-bottom:20px;">
+    <div class="chart-wrap">
+      <div class="chart-title">Perfil de Latência — Medição 1 vs Medição 2</div>
+      <canvas id="chartLatLogin"></canvas>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Vazão (Throughput) — Medição 1 vs Medição 2</div>
+      <canvas id="chartThrLogin"></canvas>
+    </div>
+  </div>
+
+  <div class="grid-2" style="gap:20px;">
+    <div class="chart-wrap">
+      <div class="chart-title">Evolução da Latência p95 ao longo dos Estágios (VUs)</div>
+      <canvas id="chartStagesLogin"></canvas>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Comparação Global — Registro vs Login (Medição 1 e Medição 2)</div>
+      <canvas id="chartGlobal"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- CONCLUSÃO -->
+<section class="section reveal" id="conclusao">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <h2>Conclusão</h2>
+  </div>
+
+  <div class="summary-box">
+    As otimizações aplicadas — redução dos parâmetros do Argon2, aumento dos workers do uvicorn,
+    eliminação do índice secundário para validação de CPF e execução assíncrona do hash — produziram
+    melhorias consistentes e mensuráveis em <strong>todos os indicadores de SLA</strong>.
+    O cenário de registro, que anteriormente <strong>falhava o threshold de p95</strong> (4.470ms vs 2.000ms),
+    passou a operar dentro do limite com folga (1.890ms). O login manteve conformidade e teve suas latências
+    reduzidas em ~55% em todos os percentis.
+  </div>
+
+  <div class="kpi-grid" style="border-radius:var(--radius); overflow:hidden;">
+    <div class="kpi kpi-green">
+      <div class="kpi-val">↓58%</div>
+      <div class="kpi-label">Redução p95 Registro<div class="kpi-sub hl-green">4.470ms → 1.890ms</div></div>
+    </div>
+    <div class="kpi kpi-green">
+      <div class="kpi-val">↓55%</div>
+      <div class="kpi-label">Redução p95 Login<div class="kpi-sub hl-green">1.640ms → 740ms</div></div>
+    </div>
+    <div class="kpi kpi-cyan">
+      <div class="kpi-val">↑72%</div>
+      <div class="kpi-label">Ganho Throughput Reg.<div class="kpi-sub hl-cyan">14,2 → 24,4 req/s</div></div>
+    </div>
+    <div class="kpi kpi-cyan">
+      <div class="kpi-val">↑68%</div>
+      <div class="kpi-label">Ganho Throughput Login<div class="kpi-sub hl-cyan">12,1 → 20,3 req/s</div></div>
+    </div>
+  </div>
+
+  <div class="spacer-md"></div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Arquivo Modificado</th><th>Otimização</th><th>Serviço(s)</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a class="file-link" href="https://github.com/seu-repo/app/api/auth.py">auth.py</a></td>
+          <td>Remoção de SELECT por índice secundário de CPF · verificação assíncrona de hash · retorno JWT</td>
+          <td><span class="tag tag-cyan">Registro</span> <span class="tag tag-green">Login</span></td>
+        </tr>
+        <tr>
+          <td><a class="file-link" href="https://github.com/seu-repo/app/utils/security.py">security.py</a></td>
+          <td>Parâmetros Argon2 ajustados: memory_cost=32768, time_cost=2, parallelism=2 · run_in_executor</td>
+          <td><span class="tag tag-cyan">Registro</span> <span class="tag tag-green">Login</span></td>
+        </tr>
+        <tr>
+          <td><a class="file-link" href="https://github.com/seu-repo/app/db/cassandra.py">cassandra.py</a></td>
+          <td>Criação de tabela auxiliar <span class="mono">cpfs_cadastrados</span> com PK no CPF (lookup direta)</td>
+          <td><span class="tag tag-cyan">Registro</span></td>
+        </tr>
+        <tr>
+          <td>Dockerfile / start command</td>
+          <td>uvicorn --workers 4 (substituindo --reload single-worker)</td>
+          <td><span class="tag tag-cyan">Registro</span> <span class="tag tag-green">Login</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span>Happy Hour — Medições de SLA · UNIRIO · 2026</span>
+  <span>Thiago Porto Scarano &amp; Felipe Fionda</span>
+</footer>
+
+<!-- ── CHARTS JS ── -->
+<script>
+Chart.defaults.color = '#5a7299';
+Chart.defaults.borderColor = '#1e2d4a';
+Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+Chart.defaults.font.size = 11;
+
+const CYAN   = '#00d4ff';
+const ORANGE = '#ff6b35';
+const GREEN  = '#00e5a0';
+const RED    = '#ff3860';
+const YELLOW = '#ffd166';
+const PURPLE = '#b48ead';
+
+function mkCyanAlpha(a) { return `rgba(0,212,255,${a})`; }
+function mkGreenAlpha(a) { return `rgba(0,229,160,${a})`; }
+function mkOrangeAlpha(a){ return `rgba(255,107,53,${a})`; }
+
+// ── REGISTRO: latência M1 vs M2 ──
+new Chart(document.getElementById('chartLatReg'), {
+  type: 'bar',
+  data: {
+    labels: ['mín', 'média', 'p50', 'p90', 'p95', 'máx'],
+    datasets: [
+      {
+        label: 'Medição 1 (ms)',
+        data: [70, 1850, 1450, 4290, 4470, 5430],
+        backgroundColor: mkCyanAlpha(0.25),
+        borderColor: CYAN,
+        borderWidth: 1.5,
+      },
+      {
+        label: 'Medição 2 (ms)',
+        data: [42, 820, 710, 1650, 1890, 2340],
+        backgroundColor: mkGreenAlpha(0.25),
+        borderColor: GREEN,
+        borderWidth: 1.5,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { position: 'top' },
+      tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('pt-BR')} ms` } }
+    },
+    scales: {
+      y: { grid: { color: '#1e2d4a' }, title: { display: true, text: 'ms' } },
+      x: { grid: { color: '#1e2d4a' } }
+    }
+  }
+});
+
+// ── REGISTRO: throughput ──
+new Chart(document.getElementById('chartThrReg'), {
+  type: 'bar',
+  data: {
+    labels: ['Vazão (req/s)', 'Requisições Totais'],
+    datasets: [
+      {
+        label: 'Medição 1',
+        data: [14.2, 723],
+        backgroundColor: mkCyanAlpha(0.3),
+        borderColor: CYAN,
+        borderWidth: 1.5,
+      },
+      {
+        label: 'Medição 2',
+        data: [24.4, 1247],
+        backgroundColor: mkGreenAlpha(0.3),
+        borderColor: GREEN,
+        borderWidth: 1.5,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      y: { grid: { color: '#1e2d4a' } },
+      x: { grid: { color: '#1e2d4a' } }
+    }
+  }
+});
+
+// ── REGISTRO: evolução por estágios ──
+new Chart(document.getElementById('chartStagesReg'), {
+  type: 'line',
+  data: {
+    labels: ['0s', '10s\n(10 VUs)', '30s\n(50 VUs)', '40s\n(100 VUs)', '51s\n(0 VUs)'],
+    datasets: [
+      {
+        label: 'p95 M1 (ms)',
+        data: [120, 850, 2800, 4470, 300],
+        borderColor: CYAN,
+        backgroundColor: mkCyanAlpha(0.1),
+        tension: 0.4,
+        fill: true,
+        pointRadius: 4,
+      },
+      {
+        label: 'p95 M2 (ms)',
+        data: [60, 380, 1200, 1890, 150],
+        borderColor: GREEN,
+        backgroundColor: mkGreenAlpha(0.1),
+        tension: 0.4,
+        fill: true,
+        pointRadius: 4,
+      },
+      {
+        label: 'Threshold (ms)',
+        data: [2000, 2000, 2000, 2000, 2000],
+        borderColor: RED,
+        borderDash: [6, 3],
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: false,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      y: { grid: { color: '#1e2d4a' }, title: { display: true, text: 'ms' } },
+      x: { grid: { color: '#1e2d4a' } }
+    }
+  }
+});
+
+// ── REGISTRO: delta percentual ──
+new Chart(document.getElementById('chartDeltaReg'), {
+  type: 'bar',
+  data: {
+    labels: ['Latência mín', 'Latência média', 'p50', 'p90', 'p95', 'Latência máx', 'Throughput'],
+    datasets: [{
+      label: 'Redução (%) — positivo = melhora',
+      data: [40, 55.7, 51.0, 61.5, 57.7, 56.9, -71.8],
+      backgroundColor: ctx => {
+        const v = ctx.raw;
+        return v > 0 ? mkGreenAlpha(0.4) : mkOrangeAlpha(0.4);
+      },
+      borderColor: ctx => {
+        const v = ctx.raw;
+        return v > 0 ? GREEN : ORANGE;
+      },
+      borderWidth: 1.5,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { position: 'top' },
+      tooltip: { callbacks: {
+        label: ctx => {
+          const v = ctx.parsed.y;
+          return v < 0 ? `Aumento de ${Math.abs(v).toFixed(1)}% (melhora)` : `Redução de ${v.toFixed(1)}%`;
+        }
+      }}
+    },
+    scales: {
+      y: { grid: { color: '#1e2d4a' }, title: { display: true, text: '% de melhora' } },
+      x: { grid: { color: '#1e2d4a' } }
+    }
+  }
+});
+
+// ── LOGIN: latência ──
+new Chart(document.getElementById('chartLatLogin'), {
+  type: 'bar',
+  data: {
+    labels: ['mín', 'média', 'p50', 'p90', 'p95', 'máx'],
+    datasets: [
+      {
+        label: 'Medição 1 (ms)',
+        data: [79, 706, 582, 1510, 1640, 2030],
+        backgroundColor: mkCyanAlpha(0.25),
+        borderColor: CYAN,
+        borderWidth: 1.5,
+      },
+      {
+        label: 'Medição 2 (ms)',
+        data: [38, 330, 285, 640, 740, 940],
+        backgroundColor: mkGreenAlpha(0.25),
+        borderColor: GREEN,
+        borderWidth: 1.5,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { position: 'top' },
+      tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('pt-BR')} ms` } }
+    },
+    scales: {
+      y: { grid: { color: '#1e2d4a' }, title: { display: true, text: 'ms' } },
+      x: { grid: { color: '#1e2d4a' } }
+    }
+  }
+});
+
+// ── LOGIN: throughput ──
+new Chart(document.getElementById('chartThrLogin'), {
+  type: 'bar',
+  data: {
+    labels: ['Vazão (req/s)', 'Requisições Totais'],
+    datasets: [
+      {
+        label: 'Medição 1',
+        data: [12.1, 582],
+        backgroundColor: mkCyanAlpha(0.3),
+        borderColor: CYAN,
+        borderWidth: 1.5,
+      },
+      {
+        label: 'Medição 2',
+        data: [20.3, 974],
+        backgroundColor: mkGreenAlpha(0.3),
+        borderColor: GREEN,
+        borderWidth: 1.5,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      y: { grid: { color: '#1e2d4a' } },
+      x: { grid: { color: '#1e2d4a' } }
+    }
+  }
+});
+
+// ── LOGIN: evolução por estágios ──
+new Chart(document.getElementById('chartStagesLogin'), {
+  type: 'line',
+  data: {
+    labels: ['0s', '10s\n(10 VUs)', '30s\n(50 VUs)', '40s\n(0 VUs)'],
+    datasets: [
+      {
+        label: 'p95 M1 (ms)',
+        data: [110, 520, 1640, 200],
+        borderColor: CYAN,
+        backgroundColor: mkCyanAlpha(0.1),
+        tension: 0.4, fill: true, pointRadius: 4,
+      },
+      {
+        label: 'p95 M2 (ms)',
+        data: [55, 240, 740, 90],
+        borderColor: GREEN,
+        backgroundColor: mkGreenAlpha(0.1),
+        tension: 0.4, fill: true, pointRadius: 4,
+      },
+      {
+        label: 'Threshold (ms)',
+        data: [2500, 2500, 2500, 2500],
+        borderColor: ORANGE,
+        borderDash: [6, 3],
+        borderWidth: 1.5,
+        pointRadius: 0, fill: false,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      y: { grid: { color: '#1e2d4a' }, title: { display: true, text: 'ms' } },
+      x: { grid: { color: '#1e2d4a' } }
+    }
+  }
+});
+
+// ── GLOBAL: comparação todos os serviços ──
+new Chart(document.getElementById('chartGlobal'), {
+  type: 'radar',
+  data: {
+    labels: ['p95 (norm)', 'Throughput (norm)', 'Lat. Média (norm)', 'Zero Falhas', 'Checks OK'],
+    datasets: [
+      {
+        label: 'Registro M1',
+        data: [20, 40, 35, 100, 100],
+        borderColor: CYAN, backgroundColor: mkCyanAlpha(0.1),
+        pointBackgroundColor: CYAN, borderWidth: 1.5,
+      },
+      {
+        label: 'Registro M2',
+        data: [65, 85, 75, 100, 100],
+        borderColor: GREEN, backgroundColor: mkGreenAlpha(0.1),
+        pointBackgroundColor: GREEN, borderWidth: 1.5,
+      },
+      {
+        label: 'Login M1',
+        data: [62, 55, 70, 100, 100],
+        borderColor: ORANGE, backgroundColor: mkOrangeAlpha(0.1),
+        pointBackgroundColor: ORANGE, borderWidth: 1.5,
+      },
+      {
+        label: 'Login M2',
+        data: [88, 90, 92, 100, 100],
+        borderColor: YELLOW, backgroundColor: `rgba(255,209,102,0.1)`,
+        pointBackgroundColor: YELLOW, borderWidth: 1.5,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      r: {
+        grid: { color: '#1e2d4a' },
+        angleLines: { color: '#1e2d4a' },
+        pointLabels: { color: '#8aa4c8', font: { size: 10 } },
+        ticks: { display: false },
+        min: 0, max: 100,
+      }
+    }
+  }
+});
+
+// ── SCROLL REVEAL ──
+const observer = new IntersectionObserver(
+  entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+  { threshold: 0.06 }
+);
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── ACTIVE NAV ──
+const sections = document.querySelectorAll('section[id], div[id]');
+const navLinks = document.querySelectorAll('.nav-link');
+const io = new IntersectionObserver(
+  entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const link = document.querySelector(`.nav-link[href="#${e.target.id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  },
+  { threshold: 0.3 }
+);
+sections.forEach(s => io.observe(s));
+</script>
+</body>
+</html>
